@@ -71,6 +71,7 @@ export default function App() {
     importJSON,
     importItems,
     findDuplicates,
+    clearAll,
   } = fs;
 
   const [query, setQuery] = useState('');
@@ -87,6 +88,7 @@ export default function App() {
         onConfirm: (folderId: string | null) => Promise<void> | void;
       }
   >(null);
+
   const [aiOpen, setAIOpen] = useState(false);
   const [duplicateDialog, setDuplicateDialog] = useState<null | { duplicates: string[][]; items: FileSystemItem[] }>(null);
   const [aiSources, setAISources] = useState<string[] | undefined>(undefined);
@@ -101,6 +103,11 @@ export default function App() {
     importJSON,
     exportJSON
   );
+
+  const handleLogout = async () => {
+    await logout();
+    await clearAll();
+  };
 
   const selectMode = selectedIds.size > 0 || keepSelectMode;
 
@@ -815,7 +822,7 @@ export default function App() {
             user={user}
             loading={loading}
             syncing={syncing}
-            logout={logout}
+            logout={handleLogout}
             onClose={() => setSettingsOpen(false)}
             onSyncMerge={handleSyncMerge}
             onSyncOverwrite={handleSyncOverwrite}

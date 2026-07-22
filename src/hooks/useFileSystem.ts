@@ -306,6 +306,15 @@ export const useFileSystem = () => {
     await reload();
   };
 
+  const clearAll = useCallback(async () => {
+    await db.clearAll();
+    setItems([]);
+    setCurrentFolderId(null);
+    try {
+      localStorage.removeItem('aksaralumina:deletedIds');
+    } catch (e) {}
+  }, []);
+
   return {
     items,
     loaded,
@@ -329,5 +338,6 @@ export const useFileSystem = () => {
     importItems,
     isDescendant,
     findDuplicates,
+    clearAll,
   };
 };
