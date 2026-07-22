@@ -15,23 +15,42 @@ export function useAppwriteSync(
 
   useEffect(() => {
     account.get().then((res) => {
-      setUser(res);
-      setLoading(false);
+      if (!res.emailVerification) {
+        account.deleteSession('current').finally(() => {
+          setUser(null);
+          setLoading(false);
+        });
+      } else {
+        setUser(res);
+        setLoading(false);
+      }
     }).catch(() => {
       setUser(null);
       setLoading(false);
     });
   }, []);
 
-  
-  
-  
-  
-  
-    const login = async (email: string, pass: string) => {
+  const verifyEmail = async (userId: string, secret: string) => {
+    try {
+      await account.updateVerification(userId, secret);
+      toast.success('Email berhasil diverifikasi. Silakan masuk.', { duration: 4000 });
+      return true;
+    } catch (e: any) {
+      toast.error('Gagal memverifikasi email: ' + e.message, { duration: 4000 });
+      return false;
+    }
+  };
+
+  const login = async (email: string, pass: string) => {
     try {
       await account.createEmailPasswordSession(email, pass);
       const acc = await account.get();
+      if (!acc.emailVerification) {
+        await account.createVerification(window.location.origin + '?action=verify');
+        await account.deleteSession('current');
+        toast.error('Email belum diverifikasi. Tautan verifikasi baru telah dikirim ke email Anda.', { duration: 5000 });
+        return false;
+      }
       setUser(acc);
       toast.success('Berhasil masuk', { duration: 2000 });
       return true;
@@ -45,9 +64,9 @@ export function useAppwriteSync(
     try {
       await account.create(ID.unique(), email, pass);
       await account.createEmailPasswordSession(email, pass);
-      const acc = await account.get();
-      setUser(acc);
-      toast.success('Berhasil mendaftar', { duration: 2000 });
+      await account.createVerification(window.location.origin + '?action=verify');
+      await account.deleteSession('current');
+      toast.success('Pendaftaran berhasil! Silakan periksa kotak masuk email Anda untuk memverifikasi akun.', { duration: 5000 });
       return true;
     } catch (e: any) {
       toast.error('Gagal daftar: ' + e.message, { duration: 2000 });
@@ -66,7 +85,7 @@ export function useAppwriteSync(
     }
 
     try {
-      await account.createRecovery(email, window.location.origin);
+      await account.createRecovery(email, window.location.origin + '?action=reset');
       localStorage.setItem(LAST_OTP_KEY, now.toString());
       toast.success('Tautan reset sandi telah dikirim ke email Anda.', { duration: 3000 });
       return true;
@@ -190,6 +209,10 @@ export function useAppwriteSync(
         if (naik > 0 || turun > 0) {
           await databases.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_ID, docId, {
             data: finalDataStr,
+            email: user.email
+          });
+        } else {
+          await databases.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_ID, docId, {
             email: user.email
           });
         }
@@ -334,6 +357,7 @@ export function useAppwriteSync(
     register,
     resetPassword,
     updatePasswordRecovery,
+    verifyEmail,
     logout,
     syncData,
     overwriteCloudData

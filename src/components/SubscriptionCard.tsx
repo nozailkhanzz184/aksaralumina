@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Crown, CheckCircle2, Clock, Upload, ShieldCheck, Zap, Copy, QrCode } from 'lucide-react';
+import { Crown, CheckCircle2, Clock, Upload, ShieldCheck, Zap, Copy, QrCode, Info } from 'lucide-react';
 import { useI18n } from '../lib/i18n';
 import { account } from '../lib/appwrite';
 import { toast } from 'sonner';
@@ -137,26 +137,8 @@ export const SubscriptionCard = ({ user }: { user: any }) => {
           <h3 className="font-bold text-neutral-900 text-lg mb-4 border-b border-neutral-100 pb-3">Selesaikan Pembayaran</h3>
           
           <div className="bg-neutral-50 p-4 rounded-xl border border-neutral-200 mb-5">
-            <p className="text-sm text-neutral-600 mb-2">Silakan transfer <strong>Rp 5.000</strong> ke salah satu rekening/dompet berikut:</p>
+            <p className="text-sm text-neutral-600 mb-2">Silakan transfer <strong>Rp 5.000</strong> ke salah satu metode pembayaran berikut:</p>
             <ul className="text-sm font-medium text-neutral-800 space-y-2 mb-3">
-              <li className="flex justify-between items-center border-b border-neutral-200 pb-1.5">
-                <span className="text-neutral-500">GoPay / Shopeepay</span>
-                <div className="flex items-center gap-2">
-                  <span>0857-1451-3616</span>
-                  <button type="button" onClick={() => copyToClipboard('085714513616', 'E-Wallet')} className="p-1 text-neutral-400 hover:text-neutral-900 transition-colors" title="Salin nomor E-Wallet">
-                    <Copy size={14} />
-                  </button>
-                </div>
-              </li>
-              <li className="flex justify-between items-center border-b border-neutral-200 pb-1.5">
-                <span className="text-neutral-500">BCA</span>
-                <div className="flex items-center gap-2">
-                  <span>5745442525 a.n Abdul Karim</span>
-                  <button type="button" onClick={() => copyToClipboard('5745442525', 'BCA')} className="p-1 text-neutral-400 hover:text-neutral-900 transition-colors" title="Salin rekening BCA">
-                    <Copy size={14} />
-                  </button>
-                </div>
-              </li>
               <li className="flex flex-col border-b border-neutral-200 pb-1.5 pt-1">
                 <div className="flex justify-between items-center">
                   <span className="text-neutral-500">QRIS (Semua Pembayaran)</span>
@@ -171,9 +153,7 @@ export const SubscriptionCard = ({ user }: { user: any }) => {
                 </div>
                 {showQRIS && (
                   <div className="mt-3 mb-1 flex flex-col items-center justify-center p-4 bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm">
-                    <img src="/qris.png" alt="QRIS Telur Gulung Rehan" className="w-full max-w-[200px] h-auto object-contain mb-2" />
-                    <p className="text-[11px] text-neutral-500 text-center font-medium">A.n. Telur Gulung Rehan</p>
-                    <p className="text-[10px] text-neutral-400 text-center">NMID: ID1023300477420</p>
+                    <img src="/qris.png" alt="QRIS AksaraLumina" className="w-full max-w-[200px] h-auto object-contain mb-2" />
                   </div>
                 )}
               </li>
@@ -224,7 +204,6 @@ export const SubscriptionCard = ({ user }: { user: any }) => {
                 required
                 value={txId}
                 onChange={e => setTxId(e.target.value)}
-                placeholder="Mis: Referensi BCA, Link gambar, atau TxHash"
                 className="w-full bg-neutral-50 border border-neutral-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-neutral-900 transition-colors"
               />
             </div>
@@ -247,6 +226,14 @@ export const SubscriptionCard = ({ user }: { user: any }) => {
               </button>
             </div>
           </form>
+          
+          <div className="bg-blue-50 border border-blue-100 p-3.5 rounded-xl mt-4 text-xs text-blue-800 space-y-2">
+            <p className="font-semibold text-blue-900 flex items-center gap-1.5"><Info size={15} /> Panduan Verifikasi Cepat</p>
+            <ul className="list-disc pl-4 space-y-1.5 opacity-90 leading-relaxed">
+              <li><strong>QRIS:</strong> Masukkan nomor <strong>RRN (Retrieval Reference Number)</strong> yang tertera pada struk, ATAU masukkan link URL gambar struk yang menampilkan RRN dengan jelas.</li>
+              <li><strong>Crypto:</strong> Masukkan <strong>URL Transaction Hash (TxHash)</strong> dari Blockchain Explorer.</li>
+            </ul>
+          </div>
         </div>
       )}
     </div>

@@ -96,7 +96,7 @@ export default function App() {
   
   const { lang, setLang, t } = useI18n();
   
-  const { user, loading, syncing, login, register, resetPassword, updatePasswordRecovery, logout, syncData, overwriteCloudData } = useAppwriteSync(
+  const { user, loading, syncing, login, register, resetPassword, updatePasswordRecovery, verifyEmail, logout, syncData, overwriteCloudData } = useAppwriteSync(
     items,
     importJSON,
     exportJSON
@@ -458,7 +458,7 @@ export default function App() {
   };
 
   if (loading || !user) {
-    return <LoginScreen login={login} register={register} resetPassword={resetPassword} updatePasswordRecovery={updatePasswordRecovery} loading={loading} />;
+    return <LoginScreen login={login} register={register} resetPassword={resetPassword} updatePasswordRecovery={updatePasswordRecovery} verifyEmail={verifyEmail} loading={loading} />;
   }
 
   if (!loaded) {

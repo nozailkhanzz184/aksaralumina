@@ -8,10 +8,11 @@ interface Props {
   register: (email: string, pass: string) => Promise<boolean>;
   resetPassword?: (email: string) => Promise<boolean>;
   updatePasswordRecovery?: (userId: string, secret: string, newPass: string) => Promise<boolean>;
+  verifyEmail?: (userId: string, secret: string) => Promise<boolean>;
   loading: boolean;
 }
 
-export const LoginScreen = ({ login, register, resetPassword, updatePasswordRecovery, loading }: Props) => {
+export const LoginScreen = ({ login, register, resetPassword, updatePasswordRecovery, verifyEmail, loading }: Props) => {
   const { t, lang, setLang } = useI18n();
   const [mode, setMode] = useState<'login' | 'register' | 'forgot' | 'reset'>('login');
   const [email, setEmail] = useState('');
@@ -26,14 +27,23 @@ export const LoginScreen = ({ login, register, resetPassword, updatePasswordReco
     const params = new URLSearchParams(window.location.search);
     const uid = params.get('userId');
     const sec = params.get('secret');
+    const action = params.get('action');
+    
     if (uid && sec) {
-      setUserId(uid);
-      setSecret(sec);
-      setMode('reset');
-      // clear URL safely
-      window.history.replaceState({}, document.title, window.location.pathname);
+      if (action === 'verify' && verifyEmail) {
+        verifyEmail(uid, sec).then((res) => {
+          if (res) setMode('login');
+        });
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else {
+        setUserId(uid);
+        setSecret(sec);
+        setMode('reset');
+        // clear URL safely
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
     }
-  }, []);
+  }, [verifyEmail]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
