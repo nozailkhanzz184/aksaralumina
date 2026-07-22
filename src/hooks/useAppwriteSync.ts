@@ -121,7 +121,7 @@ export function useAppwriteSync(
           return it;
         });
       } catch (err: any) {
-        if (err.code !== 404) throw err;
+        if (err.code !== 404 && err.code !== 403) throw err;
       }
       
       const localItems = Array.isArray(items) ? items : [];
@@ -229,7 +229,7 @@ export function useAppwriteSync(
         await databases.getDocument(APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_ID, docId);
         exists = true;
       } catch (err: any) {
-        if (err.code !== 404) throw err;
+        if (err.code !== 404 && err.code !== 403) throw err;
       }
       
       const localApiKey = localStorage.getItem('aksaralumina:openrouter-key') || '';
