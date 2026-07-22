@@ -1,0 +1,25 @@
+{
+  "summary": "First-finish smoke test for plaintxtai PWA. Backend health OK. Frontend loads at mobile 420x800; all key data-testids present. Support Card with QR/copy/send/reddit/close, toolbar (search/new-folder/new-file/ai), folder+file creation via prompt, editor autofocus and back, in-content search, AI Helper with 8 modes + no-API-key error, ItemMenu with all 8 actions, and Support close persistence via localStorage all work.",
+  "tested_scope": ["frontend", "backend", "integration"],
+  "passed": [
+    "GET /api/health -> 200 {status:'ok', app:'plaintxtai'}",
+    "Frontend loads at REACT_APP_BACKEND_URL",
+    "Support Card visible with close/qr/copy/send/reddit buttons and address 'zrcxvs.base.eth'",
+    "Support close hides card + sets 'plaintxtai:support-hide-until' localStorage; stays hidden after reload",
+    "QR modal opens on QR button click",
+    "Toolbar has search-input (placeholder 'Cari nama & isi...'), new-folder-btn, new-file-btn, ai-btn in one row",
+    "Create folder 'Catatan' via prompt works",
+    "Create file 'ide.txt' opens editor-textarea autofocused, typing 'halo dunia' and editor-back-btn returns to list showing file",
+    "Search 'halo' filters and shows 'ide.txt' (content search works)",
+    "ItemMenu (item-menu-*) opens with all actions: edit, copy-content, rename, move, copy, duplicate, ai, delete",
+    "Modals (QR, ItemMenu, AI) render top-anchored on 420px mobile viewport",
+    "AI Helper (ai-btn -> ai-helper) opens with 8 mode buttons (generate, rewrite, summarize, translate, merge, split, grammar, variation)",
+    "AI Run without API key shows ai-error 'Isi API Key OpenRouter di pengaturan.'"
+  ],
+  "failed": [],
+  "action_items": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true,
+  "notes": "Did not exhaustively test: duplicate/move/copy execution end-to-end, long-press multi-select gesture (Playwright timing on 450ms hold), Import/Export JSON file download, AI real OpenRouter call (not required per request). Core smoke passes with 39/39 checks across two runs."
+}
