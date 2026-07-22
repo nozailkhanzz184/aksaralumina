@@ -189,7 +189,8 @@ export function useAppwriteSync(
       if (exists) {
         if (naik > 0 || turun > 0) {
           await databases.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_ID, docId, {
-            data: finalDataStr
+            data: finalDataStr,
+            email: user.email
           });
         }
       } else {
@@ -197,7 +198,10 @@ export function useAppwriteSync(
           APPWRITE_DATABASE_ID, 
           APPWRITE_COLLECTION_ID, 
           docId, 
-          { data: finalDataStr },
+          { 
+            data: finalDataStr,
+            email: user.email
+          },
           [
             Permission.read(Role.user(user.$id)),
             Permission.update(Role.user(user.$id)),
@@ -246,14 +250,18 @@ export function useAppwriteSync(
       
       if (exists) {
         await databases.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_ID, docId, {
-          data: finalDataStr
+          data: finalDataStr,
+          email: user.email
         });
       } else {
         await databases.createDocument(
           APPWRITE_DATABASE_ID, 
           APPWRITE_COLLECTION_ID, 
           docId, 
-          { data: finalDataStr },
+          { 
+            data: finalDataStr,
+            email: user.email
+          },
           [
             Permission.read(Role.user(user.$id)),
             Permission.update(Role.user(user.$id)),
