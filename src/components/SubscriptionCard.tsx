@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Crown, CheckCircle2, Clock, Upload, ShieldCheck, Zap } from 'lucide-react';
+import { Crown, CheckCircle2, Clock, Upload, ShieldCheck, Zap, Copy } from 'lucide-react';
 import { useI18n } from '../lib/i18n';
 import { account } from '../lib/appwrite';
 import { toast } from 'sonner';
@@ -13,6 +13,15 @@ export const SubscriptionCard = ({ user }: { user: any }) => {
   const prefs = user?.prefs || {};
   const proStatus = prefs.proStatus || 'free'; // 'free', 'pending', 'pro'
   
+  const copyToClipboard = async (text: string, name: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(`Alamat ${name} disalin`);
+    } catch {
+      toast.error('Gagal menyalin');
+    }
+  };
+
   const handleUpgrade = () => {
     setStep('payment');
   };
@@ -129,19 +138,47 @@ export const SubscriptionCard = ({ user }: { user: any }) => {
           <div className="bg-neutral-50 p-4 rounded-xl border border-neutral-200 mb-5">
             <p className="text-sm text-neutral-600 mb-2">Silakan transfer <strong>Rp 5.000</strong> ke salah satu rekening/dompet berikut:</p>
             <ul className="text-sm font-medium text-neutral-800 space-y-2 mb-3">
-              <li className="flex justify-between border-b border-neutral-200 pb-1">
-                <span className="text-neutral-500">GoPay / OVO / Dana</span>
-                <span>0812-3456-7890</span>
+              <li className="flex justify-between items-center border-b border-neutral-200 pb-1.5">
+                <span className="text-neutral-500">GoPay / Shopeepay</span>
+                <div className="flex items-center gap-2">
+                  <span>0857-1451-3616</span>
+                  <button type="button" onClick={() => copyToClipboard('085714513616', 'E-Wallet')} className="p-1 text-neutral-400 hover:text-neutral-900 transition-colors" title="Salin nomor E-Wallet">
+                    <Copy size={14} />
+                  </button>
+                </div>
               </li>
-              <li className="flex justify-between border-b border-neutral-200 pb-1">
-                <span className="text-neutral-500">BCA</span>
-                <span>1234567890 a.n Nozail Khan</span>
-              </li>
-              <li className="flex justify-between border-b border-neutral-200 pb-1">
-                <span className="text-neutral-500">Crypto (USDT/USDC - Base)</span>
-                <span className="truncate max-w-[120px]" title="0x1234567890abcdef1234567890abcdef12345678">0x1234...5678</span>
-              </li>
+
             </ul>
+            
+            <div className="mt-4 mb-3">
+              <p className="text-xs font-semibold text-neutral-500 mb-2 uppercase tracking-wider">Crypto (Pilih Jaringan)</p>
+              <div className="space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white border border-neutral-200 rounded-lg p-2.5 gap-2">
+                  <div>
+                    <div className="text-sm font-medium text-neutral-800">USDT / USDC / ETH</div>
+                    <div className="text-xs text-neutral-500">Base / BSC / Polygon / Optimism</div>
+                  </div>
+                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                    <span className="text-xs text-neutral-500 font-mono truncate w-[100px]" title="0x0b90bCCf03A9cF051F6cCCeC6dFc45259752C825">0x0b90...C825</span>
+                    <button type="button" onClick={() => copyToClipboard('0x0b90bCCf03A9cF051F6cCCeC6dFc45259752C825', 'EVM Crypto')} className="p-1.5 bg-neutral-100 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200 rounded-md transition-colors" title="Salin alamat EVM">
+                      <Copy size={14} />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white border border-neutral-200 rounded-lg p-2.5 gap-2">
+                  <div>
+                    <div className="text-sm font-medium text-neutral-800">Solana (SOL / USDC)</div>
+                    <div className="text-xs text-neutral-500">Jaringan: Solana</div>
+                  </div>
+                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                    <span className="text-xs text-neutral-500 font-mono truncate w-[100px]" title="4S2tC1ze5STbQKtRF54dRwDzYwNWnXwuhqNXB985g6YC">4S2tC1...g6YC</span>
+                    <button type="button" onClick={() => copyToClipboard('4S2tC1ze5STbQKtRF54dRwDzYwNWnXwuhqNXB985g6YC', 'Solana')} className="p-1.5 bg-neutral-100 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200 rounded-md transition-colors" title="Salin alamat Solana">
+                      <Copy size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
             <p className="text-xs text-neutral-500 flex items-start gap-1">
               <ShieldCheck size={14} className="shrink-0 mt-0.5 text-emerald-600" />
               Pembayaran manual menjamin keamanan 100% tanpa potongan pihak ketiga.
