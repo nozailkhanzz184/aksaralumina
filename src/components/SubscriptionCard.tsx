@@ -3,6 +3,7 @@ import { Crown, CheckCircle2, Clock, Upload, ShieldCheck, Zap, Copy, QrCode, Inf
 import { useI18n } from '../lib/i18n';
 import { account } from '../lib/appwrite';
 import { toast } from 'sonner';
+import qrisImage from '../assets/qris.png';
 
 export const SubscriptionCard = ({ user }: { user: any }) => {
   const { t } = useI18n();
@@ -153,7 +154,7 @@ export const SubscriptionCard = ({ user }: { user: any }) => {
                 </div>
                 {showQRIS && (
                   <div className="mt-3 mb-1 flex flex-col items-center justify-center p-4 bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm">
-                    <img src="/qris.png" alt="QRIS AksaraLumina" className="w-full max-w-[200px] h-auto object-contain mb-2" />
+                    <img src={qrisImage} alt="QRIS AksaraLumina" className="w-full max-w-[200px] h-auto object-contain mb-2" />
                   </div>
                 )}
               </li>
