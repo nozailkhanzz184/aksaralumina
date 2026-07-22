@@ -102,14 +102,15 @@ export function useAppwriteSync(
     setSyncing(true);
     const toastId = toast.loading('Menyinkronkan data...');
     try {
-      const res = await databases.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_ID);
       let cloudItems: FileSystemItem[] = [];
-      let docId = null;
+      let docId = user.$id;
       let cloudApiKey = '';
       let cloudModel = '';
-      if (res && res.documents && res.documents.length > 0) {
-        docId = res.documents[0].$id;
-        const parsed = JSON.parse(res.documents[0].data);
+      let exists = false;
+      try {
+        const doc = await databases.getDocument(APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_ID, docId);
+        exists = true;
+        const parsed = JSON.parse(doc.data);
         cloudApiKey = parsed.apiKey || '';
         cloudModel = parsed.model || '';
         const rawItems: FileSystemItem[] = Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.items) ? parsed.items : []);
@@ -119,6 +120,8 @@ export function useAppwriteSync(
           }
           return it;
         });
+      } catch (err: any) {
+        if (err.code !== 404) throw err;
       }
       
       const localItems = Array.isArray(items) ? items : [];
@@ -183,7 +186,7 @@ export function useAppwriteSync(
         deletedIds: []
       });
       
-      if (docId) {
+      if (exists) {
         if (naik > 0 || turun > 0) {
           await databases.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_ID, docId, {
             data: finalDataStr
@@ -193,7 +196,7 @@ export function useAppwriteSync(
         await databases.createDocument(
           APPWRITE_DATABASE_ID, 
           APPWRITE_COLLECTION_ID, 
-          ID.unique(), 
+          docId, 
           { data: finalDataStr },
           [
             Permission.read(Role.user(user.$id)),
@@ -220,10 +223,13 @@ export function useAppwriteSync(
     setSyncing(true);
     const toastId = toast.loading('Menimpa data di awan...');
     try {
-      const res = await databases.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_ID);
-      let docId = null;
-      if (res && res.documents && res.documents.length > 0) {
-        docId = res.documents[0].$id;
+      let docId = user.$id;
+      let exists = false;
+      try {
+        await databases.getDocument(APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_ID, docId);
+        exists = true;
+      } catch (err: any) {
+        if (err.code !== 404) throw err;
       }
       
       const localApiKey = localStorage.getItem('aksaralumina:openrouter-key') || '';
@@ -238,7 +244,7 @@ export function useAppwriteSync(
         deletedIds: []
       });
       
-      if (docId) {
+      if (exists) {
         await databases.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_ID, docId, {
           data: finalDataStr
         });
@@ -246,7 +252,7 @@ export function useAppwriteSync(
         await databases.createDocument(
           APPWRITE_DATABASE_ID, 
           APPWRITE_COLLECTION_ID, 
-          ID.unique(), 
+          docId, 
           { data: finalDataStr },
           [
             Permission.read(Role.user(user.$id)),

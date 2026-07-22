@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Crown, CheckCircle2, Clock, Upload, ShieldCheck, Zap, Copy } from 'lucide-react';
+import { Crown, CheckCircle2, Clock, Upload, ShieldCheck, Zap, Copy, QrCode } from 'lucide-react';
 import { useI18n } from '../lib/i18n';
 import { account } from '../lib/appwrite';
 import { toast } from 'sonner';
@@ -9,6 +9,7 @@ export const SubscriptionCard = ({ user }: { user: any }) => {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'info' | 'payment'>('info');
   const [txId, setTxId] = useState('');
+  const [showQRIS, setShowQRIS] = useState(false);
   
   const prefs = user?.prefs || {};
   const proStatus = prefs.proStatus || 'free'; // 'free', 'pending', 'pro'
@@ -147,7 +148,35 @@ export const SubscriptionCard = ({ user }: { user: any }) => {
                   </button>
                 </div>
               </li>
-
+              <li className="flex justify-between items-center border-b border-neutral-200 pb-1.5">
+                <span className="text-neutral-500">BCA</span>
+                <div className="flex items-center gap-2">
+                  <span>5745442525 a.n Abdul Karim</span>
+                  <button type="button" onClick={() => copyToClipboard('5745442525', 'BCA')} className="p-1 text-neutral-400 hover:text-neutral-900 transition-colors" title="Salin rekening BCA">
+                    <Copy size={14} />
+                  </button>
+                </div>
+              </li>
+              <li className="flex flex-col border-b border-neutral-200 pb-1.5 pt-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-neutral-500">QRIS (Semua Pembayaran)</span>
+                  <button 
+                    type="button" 
+                    onClick={() => setShowQRIS(!showQRIS)} 
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium bg-neutral-100 text-neutral-700 hover:bg-neutral-200 hover:text-neutral-900 rounded-lg transition-colors"
+                  >
+                    <QrCode size={14} />
+                    {showQRIS ? 'Tutup QRIS' : 'Lihat QRIS'}
+                  </button>
+                </div>
+                {showQRIS && (
+                  <div className="mt-3 mb-1 flex flex-col items-center justify-center p-4 bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm">
+                    <img src="/qris.png" alt="QRIS Telur Gulung Rehan" className="w-full max-w-[200px] h-auto object-contain mb-2" />
+                    <p className="text-[11px] text-neutral-500 text-center font-medium">A.n. Telur Gulung Rehan</p>
+                    <p className="text-[10px] text-neutral-400 text-center">NMID: ID1023300477420</p>
+                  </div>
+                )}
+              </li>
             </ul>
             
             <div className="mt-4 mb-3">
