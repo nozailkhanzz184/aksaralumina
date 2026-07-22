@@ -91,7 +91,7 @@ export const SubscriptionCard = ({ user }: { user: any }) => {
             </div>
             <div>
               <h3 className="font-bold text-neutral-900 text-lg">Tingkatkan ke PRO</h3>
-              <p className="text-sm text-neutral-500">Rp 50.000 / Bulan</p>
+              <p className="text-sm text-neutral-500">Rp 5.000 / minggu</p>
             </div>
           </div>
           
@@ -127,7 +127,7 @@ export const SubscriptionCard = ({ user }: { user: any }) => {
           <h3 className="font-bold text-neutral-900 text-lg mb-4 border-b border-neutral-100 pb-3">Selesaikan Pembayaran</h3>
           
           <div className="bg-neutral-50 p-4 rounded-xl border border-neutral-200 mb-5">
-            <p className="text-sm text-neutral-600 mb-2">Silakan transfer <strong>Rp 50.000</strong> ke salah satu rekening/dompet berikut:</p>
+            <p className="text-sm text-neutral-600 mb-2">Silakan transfer <strong>Rp 5.000</strong> ke salah satu rekening/dompet berikut:</p>
             <ul className="text-sm font-medium text-neutral-800 space-y-2 mb-3">
               <li className="flex justify-between border-b border-neutral-200 pb-1">
                 <span className="text-neutral-500">GoPay / OVO / Dana</span>
@@ -135,7 +135,7 @@ export const SubscriptionCard = ({ user }: { user: any }) => {
               </li>
               <li className="flex justify-between border-b border-neutral-200 pb-1">
                 <span className="text-neutral-500">BCA</span>
-                <span>1234567890 a.n Pengembang</span>
+                <span>1234567890 a.n Nozail Khan</span>
               </li>
               <li className="flex justify-between border-b border-neutral-200 pb-1">
                 <span className="text-neutral-500">Crypto (USDT/USDC - Base)</span>
