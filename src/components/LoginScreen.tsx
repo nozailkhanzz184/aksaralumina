@@ -91,11 +91,11 @@ export const LoginScreen = ({ login, register, resetPassword, updatePasswordReco
   const langs = [
     { id: 'id', label: 'Indonesian' },
     { id: 'en', label: 'English' },
-    { id: 'zh-CN', label: '简体中文' },
-    { id: 'zh-TW', label: '繁體中文' },
-    { id: 'fr', label: 'Français' },
+    { id: 'zh', label: '简体中文' },
+    { id: 'es', label: 'Español' },
+    { id: 'pt', label: 'Português' },
     { id: 'ja', label: '日本語' },
-    { id: 'vi', label: 'Tiếng Việt' }
+    { id: 'ru', label: 'Русский' }
   ];
 
   const getTitle = () => {

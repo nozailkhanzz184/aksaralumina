@@ -86,6 +86,7 @@ export const useFileSystem = () => {
   };
 
   const renameItem = async (id: string, name: string) => {
+    if (id === '__TRASH_FOLDER__') return;
     const it = items.find((i) => i.id === id);
     if (!it) return;
     const finalName = name.trim();
@@ -112,16 +113,83 @@ export const useFileSystem = () => {
     return [...all];
   };
 
-  const deleteMany = async (ids: string[]) => {
-    const all = collectDescendants(ids);
-    await db.deleteItems(all);
+  const [trashItems, setTrashItems] = useState<FileSystemItem[]>([]);
+
+  const loadTrash = useCallback(async () => {
     try {
-      const key = 'aksaralumina:deletedIds';
-      const existing = JSON.parse(localStorage.getItem(key) || '[]');
-      const updated = Array.from(new Set([...existing, ...all]));
-      localStorage.setItem(key, JSON.stringify(updated));
-    } catch (e) {}
+      const trash = await db.getAllTrashItems();
+      const now = Date.now();
+      const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
+      const expiredIds: string[] = [];
+      const validTrash: FileSystemItem[] = [];
+
+      for (const item of trash) {
+        const deletedTime = item.deletedAt || item.updatedAt;
+        if (now - deletedTime > ONE_WEEK) {
+          expiredIds.push(item.id);
+        } else {
+          validTrash.push(item);
+        }
+      }
+
+      if (expiredIds.length > 0) {
+        await db.deleteTrashItems(expiredIds);
+      }
+      setTrashItems(validTrash);
+    } catch {
+      setTrashItems([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadTrash();
+  }, [loadTrash]);
+
+  const deleteMany = async (ids: string[]) => {
+    const validIds = ids.filter((id) => id !== '__TRASH_FOLDER__');
+    if (!validIds.length) return;
+    const all = collectDescendants(validIds);
+    const now = Date.now();
+    const itemsToDelete = items.filter((i) => all.includes(i.id)).map(i => ({ ...i, deletedAt: now }));
+    if (itemsToDelete.length > 0) {
+      await db.saveTrashItems(itemsToDelete);
+      await db.deleteItems(all);
+      await loadTrash();
+    }
     await reload();
+  };
+
+  const restoreTrashItem = async (id: string) => {
+    const trashList = await db.getAllTrashItems();
+    const item = trashList.find((i) => i.id === id);
+    if (!item) return;
+
+    const allActive = await db.getAllItems();
+    const parentExists = item.parentId === null || allActive.some((i) => i.id === item.parentId);
+    const restoredItem = {
+      ...item,
+      parentId: parentExists ? item.parentId : null,
+      updatedAt: Date.now(),
+      deletedAt: undefined
+    };
+
+    await db.saveItem(restoredItem);
+    await db.deleteTrashItems([id]);
+    await loadTrash();
+    await reload();
+  };
+
+  const permanentDeleteTrashItem = async (id: string) => {
+    await db.deleteTrashItems([id]);
+    await loadTrash();
+  };
+
+  const emptyTrash = async () => {
+    const trash = await db.getAllTrashItems();
+    if (trash.length > 0) {
+      await db.deleteTrashItems(trash.map(t => t.id));
+      await loadTrash();
+    }
   };
 
   const isDescendant = (ancestorId: string, nodeId: string): boolean => {
@@ -134,8 +202,12 @@ export const useFileSystem = () => {
   };
 
   const moveMany = async (ids: string[], targetParentId: string | null) => {
+    if (targetParentId === '__TRASH_FOLDER__') {
+      await deleteMany(ids);
+      return;
+    }
     const validIds = ids.filter((id) => {
-      if (id === targetParentId) return false;
+      if (id === '__TRASH_FOLDER__' || id === targetParentId) return false;
       const it = items.find((i) => i.id === id);
       if (!it) return false;
       if (it.type === 'folder' && targetParentId && isDescendant(id, targetParentId)) return false;
@@ -202,7 +274,21 @@ export const useFileSystem = () => {
     }
   };
 
+  const TRASH_FOLDER_ID = '__TRASH_FOLDER__';
+  const trashFolderItem: FileSystemItem = {
+    id: TRASH_FOLDER_ID,
+    parentId: null,
+    name: 'trash',
+    type: 'folder',
+    order: -1,
+    createdAt: 0,
+    updatedAt: 0,
+  };
+
   const getBreadcrumbs = useCallback((): FileSystemItem[] => {
+    if (currentFolderId === TRASH_FOLDER_ID) {
+      return [trashFolderItem];
+    }
     const crumbs: FileSystemItem[] = [];
     let cur = items.find((i) => i.id === currentFolderId);
     while (cur) {
@@ -212,7 +298,16 @@ export const useFileSystem = () => {
     return crumbs;
   }, [items, currentFolderId]);
 
-  const currentItems = useMemo(() => childrenOf(currentFolderId), [childrenOf, currentFolderId]);
+  const currentItems = useMemo(() => {
+    if (currentFolderId === TRASH_FOLDER_ID) {
+      return trashItems;
+    }
+    const base = childrenOf(currentFolderId);
+    if (currentFolderId === null) {
+      return [trashFolderItem, ...base];
+    }
+    return base;
+  }, [currentFolderId, childrenOf, trashItems]);
 
   const searchItems = useCallback(
     (q: string): FileSystemItem[] => {
@@ -250,7 +345,7 @@ export const useFileSystem = () => {
   const exportJSON = () => {
     const aiKey = localStorage.getItem('aksaralumina:openrouter-key') || '';
     const aiModel = localStorage.getItem('aksaralumina:openrouter-model') || '';
-    return JSON.stringify({ app: 'plaintxtai', version: 1, items, apiKey: aiKey, model: aiModel }, null, 2);
+    return JSON.stringify({ app: 'plaintxtai', version: 1, items, trashItems, apiKey: aiKey, model: aiModel }, null, 2);
   };
 
 
@@ -258,6 +353,7 @@ export const useFileSystem = () => {
   const importJSON = async (json: string, replace: boolean) => {
     const data = JSON.parse(json);
     const incoming: FileSystemItem[] = Array.isArray(data) ? data : data.items || [];
+    const incomingTrash: FileSystemItem[] = Array.isArray(data.trashItems) ? data.trashItems : [];
     
     if (data.apiKey) {
       if (replace || !localStorage.getItem('aksaralumina:openrouter-key')) {
@@ -268,6 +364,14 @@ export const useFileSystem = () => {
       if (replace || !localStorage.getItem('aksaralumina:openrouter-model')) {
         localStorage.setItem('aksaralumina:openrouter-model', data.model);
       }
+    }
+
+    if (incomingTrash.length > 0) {
+      if (replace) {
+        // clear trash will be done via clearAll or saving
+      }
+      await db.saveTrashItems(incomingTrash);
+      await loadTrash();
     }
 
     await importItems(incoming, replace);
@@ -298,6 +402,7 @@ export const useFileSystem = () => {
   const clearAll = useCallback(async () => {
     await db.clearAll();
     setItems([]);
+    setTrashItems([]);
     setCurrentFolderId(null);
     try {
       localStorage.removeItem('aksaralumina:deletedIds');
@@ -327,5 +432,9 @@ export const useFileSystem = () => {
     importItems,
     isDescendant,
     clearAll,
+    trashItems,
+    restoreTrashItem,
+    permanentDeleteTrashItem,
+    emptyTrash,
   };
 };

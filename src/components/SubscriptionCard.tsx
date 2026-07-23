@@ -125,7 +125,7 @@ export const SubscriptionCard = ({ user }: { user: any }) => {
             </div>
             <div className="flex items-start gap-2.5 text-sm text-neutral-700">
               <CheckCircle2 size={18} className="text-emerald-500 shrink-0 mt-0.5" />
-              <span>Akses ke <strong>Model AI Premium</strong> (GPT-4, Claude 3)</span>
+              <span>Akses ke <strong>Model AI Premium</strong></span>
             </div>
             <div className="flex items-start gap-2.5 text-sm text-neutral-700">
               <CheckCircle2 size={18} className="text-emerald-500 shrink-0 mt-0.5" />

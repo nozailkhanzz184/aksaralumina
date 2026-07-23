@@ -9,6 +9,7 @@ export interface FileSystemItem {
   order: number;
   createdAt: number;
   updatedAt: number;
+  deletedAt?: number;
 }
 
 export interface AIGenFile {

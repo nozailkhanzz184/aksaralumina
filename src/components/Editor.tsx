@@ -63,7 +63,6 @@ export const Editor = ({ item, onSave, onClose, onDelete, onRename }: Props) => 
         data-testid="editor-textarea"
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        placeholder={t('editor.placeholder')}
         spellCheck={false}
         className="flex-1 w-full p-3 text-sm resize-none focus:outline-none font-mono leading-relaxed"
       />

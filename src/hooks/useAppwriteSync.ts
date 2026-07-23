@@ -6,6 +6,7 @@ import { FileSystemItem } from '../Types';
 
 export function useAppwriteSync(
   items: FileSystemItem[],
+  trashItems: FileSystemItem[],
   importJSON: (jsonStr: string, replace: boolean) => Promise<void>,
   exportJSON: () => string
 ) {
@@ -116,107 +117,33 @@ export function useAppwriteSync(
     }
   };
 
-  const syncData = useCallback(async () => {
+  const smartSync = useCallback(async () => {
     if (!user) return;
     setSyncing(true);
-    const toastId = toast.loading('Menyinkronkan data...');
+    const toastId = toast.loading('Menjalankan sinkronisasi cerdas...');
     try {
-      let cloudItems: FileSystemItem[] = [];
       let docId = user.$id;
-      let cloudApiKey = '';
-      let cloudModel = '';
-      let exists = false;
+      let cloudDoc: any = null;
       try {
-        const doc = await databases.getDocument(APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_ID, docId);
-        exists = true;
-        const parsed = JSON.parse(doc.data);
-        cloudApiKey = parsed.apiKey || '';
-        cloudModel = parsed.model || '';
-        const rawItems: FileSystemItem[] = Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.items) ? parsed.items : []);
-        cloudItems = rawItems.map(it => {
-          if (it.type === 'folder' && !it.name?.trim()) {
-            return { ...it, name: 'Folder' };
-          }
-          return it;
-        });
+        cloudDoc = await databases.getDocument(APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_ID, docId);
       } catch (err: any) {
         if (err.code !== 404 && err.code !== 403) throw err;
       }
-      
-      const localItems = Array.isArray(items) ? items : [];
-      const cloudMap = new Map(cloudItems.map(i => [i.id, i]));
-      const localMap = new Map(localItems.map(i => [i.id, i]));
-      
-      const mergedMap = new Map<string, FileSystemItem>();
-      let naik = 0;
-      let turun = 0;
-      
+
       const localApiKey = localStorage.getItem('aksaralumina:openrouter-key') || '';
       const localModel = localStorage.getItem('aksaralumina:openrouter-model') || '';
 
-      let finalApiKey = localApiKey;
-      let finalModel = localModel;
-      
-      let settingsPulled = false;
-      if (cloudApiKey && !localApiKey) {
-          finalApiKey = cloudApiKey;
-          settingsPulled = true;
-      }
-      if (cloudModel && !localModel) {
-          finalModel = cloudModel;
-          settingsPulled = true;
-      }
-      
-      if (localApiKey && !cloudApiKey) {
-          naik++;
-      }
-      if (localModel && !cloudModel) {
-          naik++;
-      }
-      if (settingsPulled) {
-          turun++;
-      }
-
-      // 1. Masukkan semua data lokal ke hasil gabungan
-      for (const l of localItems) {
-        mergedMap.set(l.id, l);
-        // Jika tidak ada di awan, berarti naik
-        if (!cloudMap.has(l.id)) {
-          naik++;
-        }
-      }
-      
-      // 2. Cek data awan yang tidak ada di perangkat
-      for (const c of cloudItems) {
-        if (!localMap.has(c.id)) {
-          mergedMap.set(c.id, c);
-          turun++;
-        }
-      }
-      
-      const mergedList = Array.from(mergedMap.values());
-      
-      const finalDataStr = JSON.stringify({ 
-        app: 'plaintxtai', 
-        version: 1, 
-        items: mergedList,
-        apiKey: finalApiKey,
-        model: finalModel,
-        deletedIds: []
-      });
-      
-      if (exists) {
-        if (naik > 0 || turun > 0) {
-          await databases.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_ID, docId, {
-            data: finalDataStr,
-            email: user.email
-          });
-        } else {
-          await databases.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_ID, docId, {
-            email: user.email
-          });
-        }
-      } else {
+      if (!cloudDoc) {
+        const deletedIds = trashItems.map(t => t.id);
+        const finalDataStr = JSON.stringify({ 
+          app: 'plaintxtai', 
+          version: 1, 
+          items: items,
+          trashItems: trashItems,
+          deletedIds: deletedIds,
+          apiKey: localApiKey,
+          model: localModel
+        });
         await databases.createDocument(
           APPWRITE_DATABASE_ID, 
           APPWRITE_COLLECTION_ID, 
@@ -231,74 +158,94 @@ export function useAppwriteSync(
             Permission.delete(Role.user(user.$id))
           ]
         );
+        toast.success('Sinkronisasi Cerdas selesai: Data lokal berhasil diunggah ke awan.', { id: toastId, duration: 2500 });
+        setSyncing(false);
+        return;
       }
-      
-      if (turun > 0) {
-        await importJSON(JSON.stringify({ items: mergedList, apiKey: finalApiKey, model: finalModel }), true);
+
+      let parsedCloud;
+      try {
+        parsedCloud = JSON.parse(cloudDoc.data);
+      } catch {
+        parsedCloud = { items: [] };
       }
-      
-      toast.success(`Sinkronisasi berhasil (${naik} file naik, ${turun} file turun).`, { id: toastId, duration: 2500 });
+
+      const rawCloudItems: FileSystemItem[] = Array.isArray(parsedCloud) ? parsedCloud : (Array.isArray(parsedCloud?.items) ? parsedCloud.items : []);
+      const cloudItems = rawCloudItems.map(it => {
+        if (it.type === 'folder' && !it.name?.trim()) {
+          return { ...it, name: 'Folder' };
+        }
+        return it;
+      });
+
+      const cloudApiKey = parsedCloud.apiKey || '';
+      const cloudModel = parsedCloud.model || '';
+
+      const localTrashIds = new Set(trashItems.map(t => t.id));
+      const cloudDeletedIds = new Set([
+        ...(Array.isArray(parsedCloud.deletedIds) ? parsedCloud.deletedIds : []),
+        ...((parsedCloud.trashItems || []).map((t: any) => t.id))
+      ]);
+
+      const itemMap = new Map<string, FileSystemItem>();
+
+      for (const item of cloudItems) {
+        if (localTrashIds.has(item.id) || cloudDeletedIds.has(item.id)) continue;
+        itemMap.set(item.id, item);
+      }
+
+      for (const localItem of items) {
+        if (localTrashIds.has(localItem.id) || cloudDeletedIds.has(localItem.id)) continue;
+        const existing = itemMap.get(localItem.id);
+        if (!existing) {
+          itemMap.set(localItem.id, localItem);
+        } else {
+          const localUpdated = localItem.updatedAt || 0;
+          const cloudUpdated = existing.updatedAt || 0;
+          if (localUpdated >= cloudUpdated) {
+            itemMap.set(localItem.id, localItem);
+          } else {
+            itemMap.set(localItem.id, existing);
+          }
+        }
+      }
+
+      const mergedItems = Array.from(itemMap.values());
+      const mergedApiKey = localApiKey || cloudApiKey;
+      const mergedModel = localModel || cloudModel;
+
+      await importJSON(JSON.stringify({ items: mergedItems, trashItems, apiKey: mergedApiKey, model: mergedModel }), true);
+
+      if (mergedApiKey) {
+        localStorage.setItem('aksaralumina:openrouter-key', mergedApiKey);
+      }
+      if (mergedModel) {
+        localStorage.setItem('aksaralumina:openrouter-model', mergedModel);
+      }
+
+      const allDeletedIds = Array.from(new Set([...trashItems.map(t => t.id), ...cloudDeletedIds]));
+      const finalDataStr = JSON.stringify({ 
+        app: 'plaintxtai', 
+        version: 1, 
+        items: mergedItems,
+        trashItems: trashItems,
+        deletedIds: allDeletedIds,
+        apiKey: mergedApiKey,
+        model: mergedModel
+      });
+
+      await databases.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_ID, docId, {
+        data: finalDataStr,
+        email: user.email
+      });
+
+      toast.success('Sinkronisasi Cerdas berhasil! Data lokal dan awan telah digabungkan secara optimal.', { id: toastId, duration: 3000 });
     } catch (e: any) {
-      toast.error('Sinkronisasi gagal: ' + e.message, { id: toastId, duration: 2500 });
+      toast.error('Gagal sinkronisasi cerdas: ' + e.message, { id: toastId, duration: 3000 });
     } finally {
       setSyncing(false);
     }
   }, [user, items, importJSON]);
-
-  const overwriteCloudData = useCallback(async () => {
-    if (!user) return;
-    setSyncing(true);
-    const toastId = toast.loading('Menimpa data di awan...');
-    try {
-      let docId = user.$id;
-      let exists = false;
-      try {
-        await databases.getDocument(APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_ID, docId);
-        exists = true;
-      } catch (err: any) {
-        if (err.code !== 404 && err.code !== 403) throw err;
-      }
-      
-      const localApiKey = localStorage.getItem('aksaralumina:openrouter-key') || '';
-      const localModel = localStorage.getItem('aksaralumina:openrouter-model') || '';
-
-      const finalDataStr = JSON.stringify({ 
-        app: 'plaintxtai', 
-        version: 1, 
-        items: items,
-        apiKey: localApiKey,
-        model: localModel,
-        deletedIds: []
-      });
-      
-      if (exists) {
-        await databases.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_ID, docId, {
-          data: finalDataStr,
-          email: user.email
-        });
-      } else {
-        await databases.createDocument(
-          APPWRITE_DATABASE_ID, 
-          APPWRITE_COLLECTION_ID, 
-          docId, 
-          { 
-            data: finalDataStr,
-            email: user.email
-          },
-          [
-            Permission.read(Role.user(user.$id)),
-            Permission.update(Role.user(user.$id)),
-            Permission.delete(Role.user(user.$id))
-          ]
-        );
-      }
-      toast.success(`Data di awan berhasil ditimpa dengan data perangkat ini.`, { id: toastId, duration: 2500 });
-    } catch (e: any) {
-      toast.error('Gagal menimpa data awan: ' + e.message, { id: toastId, duration: 2500 });
-    } finally {
-      setSyncing(false);
-    }
-  }, [user, items]);
 
   const autoBackup = useCallback(async () => {
     if (!user) return;
@@ -359,7 +306,6 @@ export function useAppwriteSync(
     updatePasswordRecovery,
     verifyEmail,
     logout,
-    syncData,
-    overwriteCloudData
+    smartSync
   };
 }

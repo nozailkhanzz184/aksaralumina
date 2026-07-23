@@ -3,8 +3,9 @@ import { FileSystemItem } from '../Types';
 
 const DB_NAME = 'aksaralumina';
 const LEGACY_DB_NAME = 'simpanteks';
-const DB_VERSION = 1;
+const DB_VERSION = 3;
 const STORE = 'items';
+const TRASH_STORE = 'trash';
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
 
@@ -19,7 +20,7 @@ const migrateLegacy = async (db: IDBPDatabase) => {
     // Cek apakah DB lama ada
     const existing = await indexedDB.databases?.();
     if (existing && !existing.some((d) => d.name === LEGACY_DB_NAME)) return;
-    const legacy = await openDB(LEGACY_DB_NAME, DB_VERSION);
+    const legacy = await openDB(LEGACY_DB_NAME, 1);
     if (!legacy.objectStoreNames.contains(STORE)) {
       legacy.close();
       return;
@@ -45,6 +46,9 @@ export const initDB = () => {
         if (!db.objectStoreNames.contains(STORE)) {
           const s = db.createObjectStore(STORE, { keyPath: 'id' });
           s.createIndex('parentId', 'parentId');
+        }
+        if (!db.objectStoreNames.contains(TRASH_STORE)) {
+          db.createObjectStore(TRASH_STORE, { keyPath: 'id' });
         }
       },
     }).then(async (db) => {
@@ -81,5 +85,33 @@ export const deleteItems = async (ids: string[]) => {
 
 export const clearAll = async () => {
   const db = await initDB();
-  await db.clear(STORE);
+  const storeNames = db.objectStoreNames.contains(TRASH_STORE) ? [STORE, TRASH_STORE] : [STORE];
+  const tx = db.transaction(storeNames as any, 'readwrite');
+  await tx.objectStore(STORE).clear();
+  if (db.objectStoreNames.contains(TRASH_STORE)) {
+    await tx.objectStore(TRASH_STORE).clear();
+  }
+  await tx.done;
+};
+
+export const getAllTrashItems = async (): Promise<FileSystemItem[]> => {
+  const db = await initDB();
+  if (!db.objectStoreNames.contains(TRASH_STORE)) return [];
+  return db.getAll(TRASH_STORE);
+};
+
+export const saveTrashItems = async (items: FileSystemItem[]) => {
+  const db = await initDB();
+  if (!db.objectStoreNames.contains(TRASH_STORE)) return;
+  const tx = db.transaction(TRASH_STORE, 'readwrite');
+  await Promise.all(items.map((it) => tx.store.put(it)));
+  await tx.done;
+};
+
+export const deleteTrashItems = async (ids: string[]) => {
+  const db = await initDB();
+  if (!db.objectStoreNames.contains(TRASH_STORE)) return;
+  const tx = db.transaction(TRASH_STORE, 'readwrite');
+  await Promise.all(ids.map((id) => tx.store.delete(id)));
+  await tx.done;
 };

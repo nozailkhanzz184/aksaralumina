@@ -5,14 +5,21 @@ import {
   User, 
   LogOut,
   CloudUpload,
+  CloudDownload,
   RefreshCw,
   Download,
   Upload, 
   Loader2, 
   Save, 
-  X
+  X,
+  Folder,
+  FileText,
+  RotateCcw,
+  Trash2,
+  Clock
 } from 'lucide-react';
 import { SubscriptionCard } from './SubscriptionCard';
+import { FileSystemItem } from '../Types';
 
 import { loadKey, loadModel, loadModelHistory, saveKey, saveModel, DEFAULT_MODEL } from '../lib/openrouter';
 import { useI18n } from '../lib/i18n';
@@ -23,15 +30,14 @@ interface Props {
   syncing: boolean;
   logout: () => Promise<void>;
   onClose: () => void;
-  onSyncMerge?: () => Promise<void>;
-  onSyncOverwrite?: () => Promise<void>;
+  onSmartSync?: () => Promise<void>;
   onExport?: () => void;
   onImport?: () => void;
 }
 
 type TabType = 'api' | 'wallet' | 'profile' | 'sync' | null;
 
-export const SettingsDialog = ({ user, loading, syncing, logout, onClose, onSyncMerge, onSyncOverwrite, onExport, onImport }: Props) => {
+export const SettingsDialog = ({ user, loading, syncing, logout, onClose, onSmartSync, onExport, onImport }: Props) => {
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<TabType>(window.innerWidth < 640 ? null : 'api');
   const [apiKey, setApiKey] = useState('');
@@ -109,7 +115,7 @@ export const SettingsDialog = ({ user, loading, syncing, logout, onClose, onSync
              <X size={20} />
            </button>
          </div>
-         <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-6">
             {activeTab === 'profile' && (
               <div className="space-y-4">
                 <h4 className="text-sm font-semibold text-neutral-800 border-b border-neutral-100 pb-2">{t('settings.profile.title')}</h4>
@@ -144,29 +150,16 @@ export const SettingsDialog = ({ user, loading, syncing, logout, onClose, onSync
                 {user ? (
                   <div className="space-y-3">
                     <button
-                      onClick={onSyncMerge}
+                      onClick={onSmartSync}
                       disabled={syncing}
                       className="w-full flex items-center gap-3 p-4 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors disabled:opacity-50 text-left shadow-sm"
                     >
-                      <div className={`p-2 rounded-lg bg-blue-50 text-blue-600 ${syncing ? 'animate-spin' : ''}`}>
-                        <RefreshCw size={20} />
+                      <div className={`p-2 rounded-lg bg-blue-50 text-blue-600 ${syncing ? 'animate-pulse' : ''}`}>
+                        <RefreshCw size={20} className={syncing ? 'animate-spin' : ''} />
                       </div>
                       <div>
-                        <p className="font-medium text-sm text-neutral-900">{t('btn.syncMerge') || 'Sync Merge'}</p>
-                        <p className="text-xs text-neutral-500 mt-0.5">{t('sync.merge.desc') || 'Merge local data with cloud'}</p>
-                      </div>
-                    </button>
-                    <button
-                      onClick={onSyncOverwrite}
-                      disabled={syncing}
-                      className="w-full flex items-center gap-3 p-4 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors disabled:opacity-50 text-left shadow-sm"
-                    >
-                      <div className={`p-2 rounded-lg bg-orange-50 text-orange-600 ${syncing ? 'animate-pulse' : ''}`}>
-                        <CloudUpload size={20} />
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm text-neutral-900">{t('btn.syncOverwrite') || 'Force Overwrite Cloud'}</p>
-                        <p className="text-xs text-neutral-500 mt-0.5">{t('sync.overwrite.desc') || 'Overwrite cloud data'}</p>
+                        <p className="font-medium text-sm text-neutral-900">{t('btn.smartSync') || 'Smart Sync'}</p>
+                        <p className="text-xs text-neutral-500 mt-0.5">{t('sync.smart.desc') || 'Intelligently merge and sync local & cloud data'}</p>
                       </div>
                     </button>
                   </div>
@@ -261,9 +254,9 @@ export const SettingsDialog = ({ user, loading, syncing, logout, onClose, onSync
          </div>
       </div>
       
-      {/* Mobile Content Area Overlay */}
-      <div className={`sm:hidden fixed inset-0 z-50 bg-white transition-transform duration-300 ${activeTab ? 'translate-x-0' : 'translate-x-full'}`}>
-         <div className="flex flex-col h-full">
+       {/* Mobile Content Area Overlay */}
+       <div className={`sm:hidden fixed inset-0 z-50 bg-white transition-transform duration-300 ${activeTab ? 'translate-x-0' : 'translate-x-full'}`}>
+          <div className="flex flex-col h-full">
             <div className="p-4 border-b border-neutral-100 flex items-center bg-white gap-3">
               <button onClick={() => setActiveTab(null as any)} className="p-1.5 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 rounded-full">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
@@ -309,29 +302,16 @@ export const SettingsDialog = ({ user, loading, syncing, logout, onClose, onSync
                 {user ? (
                   <div className="space-y-3">
                     <button
-                      onClick={onSyncMerge}
+                      onClick={onSmartSync}
                       disabled={syncing}
                       className="w-full flex items-center gap-3 p-4 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors disabled:opacity-50 text-left shadow-sm"
                     >
-                      <div className={`p-2 rounded-lg bg-blue-50 text-blue-600 ${syncing ? 'animate-spin' : ''}`}>
-                        <RefreshCw size={20} />
+                      <div className={`p-2 rounded-lg bg-blue-50 text-blue-600 ${syncing ? 'animate-pulse' : ''}`}>
+                        <RefreshCw size={20} className={syncing ? 'animate-spin' : ''} />
                       </div>
                       <div>
-                        <p className="font-medium text-sm text-neutral-900">{t('btn.syncMerge') || 'Sync Merge'}</p>
-                        <p className="text-xs text-neutral-500 mt-0.5">{t('sync.merge.desc') || 'Merge local data with cloud'}</p>
-                      </div>
-                    </button>
-                    <button
-                      onClick={onSyncOverwrite}
-                      disabled={syncing}
-                      className="w-full flex items-center gap-3 p-4 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-50 transition-colors disabled:opacity-50 text-left shadow-sm"
-                    >
-                      <div className={`p-2 rounded-lg bg-orange-50 text-orange-600 ${syncing ? 'animate-pulse' : ''}`}>
-                        <CloudUpload size={20} />
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm text-neutral-900">{t('btn.syncOverwrite') || 'Force Overwrite Cloud'}</p>
-                        <p className="text-xs text-neutral-500 mt-0.5">{t('sync.overwrite.desc') || 'Overwrite cloud data'}</p>
+                        <p className="font-medium text-sm text-neutral-900">{t('btn.smartSync') || 'Smart Sync'}</p>
+                        <p className="text-xs text-neutral-500 mt-0.5">{t('sync.smart.desc') || 'Intelligently merge and sync local & cloud data'}</p>
                       </div>
                     </button>
                   </div>
