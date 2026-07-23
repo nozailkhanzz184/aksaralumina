@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { MoreVertical, Folder, Trash2, RotateCcw, FileText } from 'lucide-react';
+import { MoreVertical, Folder } from 'lucide-react';
 import { FileSystemItem } from '../Types';
 import { useI18n } from '../lib/i18n';
 
@@ -17,9 +17,6 @@ interface Props {
   emptyLabel?: string;
   searchMode?: boolean;
   pathOf?: (id: string | null) => string;
-  inTrash?: boolean;
-  trashCount?: number;
-  onRestoreTrash?: (id: string) => void;
 }
 
 export const FileBrowser = ({
@@ -36,9 +33,6 @@ export const FileBrowser = ({
   emptyLabel,
   searchMode = false,
   pathOf,
-  inTrash = false,
-  trashCount = 0,
-  onRestoreTrash,
 }: Props) => {
   const { t } = useI18n();
   const label = emptyLabel || t('empty.folder');
@@ -52,49 +46,33 @@ export const FileBrowser = ({
       </div>
     );
   }
-  let fileIndex = 0;
   return (
     <ul data-testid="file-list" className="flex flex-col">
-      {items.map((it) => {
-        const isTrash = it.id === '__TRASH_FOLDER__';
-        if (!isTrash) {
-          fileIndex++;
-        }
-        return (
-          <Row
-            key={it.id}
-            number={isTrash ? 0 : fileIndex}
-            isTrash={isTrash}
-            trashCount={trashCount}
-            item={it}
-            selected={selectedIds.has(it.id)}
-            selectMode={selectMode}
-            onToggleSelect={() => {
-              if (isTrash) return;
-              onToggleSelect(it.id);
-            }}
-            onOpenFolder={() => onOpenFolder(it.id)}
-            onCopyFile={() => onCopyFile(it)}
-            onOpenFile={() => onOpenFile(it)}
-            onMenu={(rect) => onMenu(it, rect)}
-            onDropOnFolder={(dragged) => onDropOnFolder(it.id, dragged)}
-            onReorder={(dragged, pos) => onReorder(dragged, it.id, pos)}
-            allSelectedIds={selectedIds}
-            searchMode={searchMode}
-            pathLabel={pathOf ? pathOf(it.parentId) : undefined}
-            inTrash={inTrash}
-            onRestoreTrash={onRestoreTrash}
-          />
-        );
-      })}
+      {items.map((it, index) => (
+        <Row
+          key={it.id}
+          number={index + 1}
+          item={it}
+          selected={selectedIds.has(it.id)}
+          selectMode={selectMode}
+          onToggleSelect={() => onToggleSelect(it.id)}
+          onOpenFolder={() => onOpenFolder(it.id)}
+          onCopyFile={() => onCopyFile(it)}
+          onOpenFile={() => onOpenFile(it)}
+          onMenu={(rect) => onMenu(it, rect)}
+          onDropOnFolder={(dragged) => onDropOnFolder(it.id, dragged)}
+          onReorder={(dragged, pos) => onReorder(dragged, it.id, pos)}
+          allSelectedIds={selectedIds}
+          searchMode={searchMode}
+          pathLabel={pathOf ? pathOf(it.parentId) : undefined}
+        />
+      ))}
     </ul>
   );
 };
 
 interface RowProps {
   number: number;
-  isTrash: boolean;
-  trashCount: number;
   item: FileSystemItem;
   selected: boolean;
   selectMode: boolean;
@@ -108,14 +86,10 @@ interface RowProps {
   onReorder: (draggedIds: string[], position: 'before' | 'after') => void;
   searchMode: boolean;
   pathLabel?: string;
-  inTrash?: boolean;
-  onRestoreTrash?: (id: string) => void;
 }
 
 const Row = ({
   number,
-  isTrash,
-  trashCount,
   item,
   selected,
   selectMode,
@@ -129,18 +103,12 @@ const Row = ({
   onReorder,
   searchMode,
   pathLabel,
-  inTrash = false,
-  onRestoreTrash,
 }: RowProps) => {
   const { t } = useI18n();
   const [dropZone, setDropZone] = useState<'over' | 'top' | 'bottom' | null>(null);
   const rowRef = useRef<HTMLLIElement>(null);
 
   const handleClick = () => {
-    if (isTrash) {
-      onOpenFolder();
-      return;
-    }
     if (selectMode) {
       onToggleSelect();
       return;
@@ -150,10 +118,6 @@ const Row = ({
   };
 
   const handleDragStart = (e: React.DragEvent) => {
-    if (isTrash) {
-      e.preventDefault();
-      return;
-    }
     const ids = selected && allSelectedIds.size > 0 ? [...allSelectedIds] : [item.id];
     e.dataTransfer.setData('text/plain', JSON.stringify(ids));
     e.dataTransfer.effectAllowed = 'move';
@@ -168,7 +132,7 @@ const Row = ({
   };
 
   const handleDragOver = (e: React.DragEvent) => {
-    if (searchMode || isTrash) return;
+    if (searchMode) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     if (!rowRef.current) return;
@@ -186,7 +150,6 @@ const Row = ({
   const handleDragLeave = () => setDropZone(null);
 
   const handleDrop = (e: React.DragEvent) => {
-    if (isTrash) return;
     e.preventDefault();
     const ids = readIds(e);
     const zone = dropZone;
@@ -201,7 +164,7 @@ const Row = ({
     <li
       ref={rowRef}
       data-testid={`item-row-${item.id}`}
-      draggable={!searchMode && !isTrash}
+      draggable={!searchMode}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -216,9 +179,7 @@ const Row = ({
       ].join(' ')}
     >
       <div className="shrink-0 flex items-center gap-2">
-        {isTrash ? (
-          <span className="w-5" />
-        ) : selectMode ? (
+        {selectMode ? (
           <span
             className={[
               'inline-block w-4 h-4 rounded border',
@@ -248,67 +209,33 @@ const Row = ({
           className={[
             'text-sm truncate flex items-center gap-1.5',
             !item.content && item.type === 'file' ? 'text-neutral-500' : '',
-            isTrash ? 'font-semibold text-neutral-900' : '',
           ].join(' ')}
           data-testid={`item-name-${item.id}`}
         >
-          {item.type === 'folder' ? (
-            <Folder size={14} className="shrink-0" strokeWidth={2} />
-          ) : (
-            <FileText size={14} className="shrink-0 text-neutral-400" />
-          )}
-          <span className="truncate flex items-center gap-1.5">
-            {isTrash ? (
-              <>
-                <span>trash</span>
-                {trashCount > 0 && (
-                  <span className="text-xs text-neutral-400 font-normal">({trashCount})</span>
-                )}
-              </>
-            ) : item.type === 'file' ? (
-              `${(item.content || '').split('\n').find((l) => l.trim()) || t('file.empty')}`
-            ) : (
-              item.name || t('file.folder')
-            )}
+          {item.type === 'folder' && <Folder size={14} className="shrink-0" strokeWidth={2} />}
+          <span className="truncate">
+            {item.type === 'file'
+              ? `${(item.content || '').split('\n').find((l) => l.trim()) || t('file.empty')}`
+              : item.name || t('file.folder')}
           </span>
         </div>
         {searchMode && pathLabel !== undefined && (
           <div className="text-[11px] text-neutral-500 truncate">{pathLabel}</div>
         )}
-        {inTrash && item.deletedAt && (
-          <div className="text-[11px] text-neutral-400 truncate mt-0.5">
-            Dihapus: {new Date(item.deletedAt).toLocaleDateString()} {new Date(item.deletedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </div>
-        )}
       </div>
-      {inTrash && onRestoreTrash && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onRestoreTrash(item.id);
-          }}
-          className="flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-xs font-medium transition-colors mr-1"
-          title="Pulihkan"
-        >
-          <RotateCcw size={12} />
-          Pulihkan
-        </button>
-      )}
-      {!isTrash && (
-        <button
-          data-testid={`item-menu-${item.id}`}
-          data-no-press="1"
-          onClick={(e) => {
-            e.stopPropagation();
-            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-            onMenu(rect);
-          }}
-          className="p-1 hover:bg-neutral-100 rounded"
-          aria-label={t('file.menu')}
-        >
-          <MoreVertical size={16} />
-        </button>
-      )}
+      <button
+        data-testid={`item-menu-${item.id}`}
+        data-no-press="1"
+        onClick={(e) => {
+          e.stopPropagation();
+          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          onMenu(rect);
+        }}
+        className="p-1 hover:bg-neutral-100 rounded"
+        aria-label={t('file.menu')}
+      >
+        <MoreVertical size={16} />
+      </button>
     </li>
   );
 };

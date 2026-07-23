@@ -412,32 +412,6 @@ export default function App() {
   };
 
   const menuActions = (item: FileSystemItem): MenuAction[] => {
-    if (item.id === '__TRASH_FOLDER__') {
-      return [];
-    }
-    if (currentFolderId === '__TRASH_FOLDER__') {
-      return [
-        {
-          key: 'restore',
-          label: 'Pulihkan',
-          onClick: async () => {
-            await restoreTrashItem(item.id);
-            showToast('Item berhasil dipulihkan');
-          },
-        },
-        {
-          key: 'permanentDelete',
-          label: 'Hapus Permanen',
-          danger: true,
-          onClick: async () => {
-            if (await customConfirm('Hapus permanen item ini?')) {
-              await permanentDeleteTrashItem(item.id);
-              showToast('Item dihapus permanen');
-            }
-          },
-        },
-      ];
-    }
     const list: MenuAction[] = [];
     list.push({
       key: 'reorder',
@@ -668,75 +642,42 @@ export default function App() {
             {selectedIds.size} dipilih
           </div>
           <div className="flex-1" />
-          {currentFolderId === '__TRASH_FOLDER__' ? (
-            <>
-              <button
-                onClick={async () => {
-                  for (const id of selectedIds) {
-                    await restoreTrashItem(id);
-                  }
-                  clearSelection();
-                  showToast('Item terpilih berhasil dipulihkan');
-                }}
-                className="px-3 py-1 bg-blue-50 text-blue-600 rounded text-xs font-medium hover:bg-blue-100"
-              >
-                Pulihkan
-              </button>
-              <button
-                onClick={async () => {
-                  if (await customConfirm(`Hapus permanen ${selectedIds.size} item?`)) {
-                    for (const id of selectedIds) {
-                      await permanentDeleteTrashItem(id);
-                    }
-                    clearSelection();
-                    showToast('Item terpilih dihapus permanen');
-                  }
-                }}
-                className="px-3 py-1 bg-red-50 text-red-600 rounded text-xs font-medium hover:bg-red-100"
-              >
-                Hapus Permanen
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                data-testid="bulk-move-btn"
-                onClick={() => openMovePicker([...selectedIds])}
-                className="p-1 hover:bg-neutral-100 rounded"
-                aria-label={t('action.move')}
-                title={t('action.move')}
-              >
-                <Move size={16} />
-              </button>
-              <button
-                data-testid="bulk-copy-btn"
-                onClick={() => openCopyPicker([...selectedIds])}
-                className="p-1 hover:bg-neutral-100 rounded"
-                aria-label={t('action.copy')}
-                title={t('action.copy')}
-              >
-                <Copy size={16} />
-              </button>
-              <button
-                data-testid="bulk-reorder-btn"
-                onClick={bulkReorder}
-                className="p-1 hover:bg-neutral-100 rounded"
-                aria-label={t('action.moveToNum')}
-                title={t('action.moveToNum')}
-              >
-                <ListOrdered size={16} />
-              </button>
-              <button
-                data-testid="bulk-delete-btn"
-                onClick={bulkDelete}
-                className="p-1 hover:bg-neutral-100 rounded text-red-600"
-                aria-label={t('action.delete')}
-                title={t('action.delete')}
-              >
-                <Trash2 size={16} />
-              </button>
-            </>
-          )}
+          <button
+            data-testid="bulk-move-btn"
+            onClick={() => openMovePicker([...selectedIds])}
+            className="p-1 hover:bg-neutral-100 rounded"
+            aria-label={t('action.move')}
+            title={t('action.move')}
+          >
+            <Move size={16} />
+          </button>
+          <button
+            data-testid="bulk-copy-btn"
+            onClick={() => openCopyPicker([...selectedIds])}
+            className="p-1 hover:bg-neutral-100 rounded"
+            aria-label={t('action.copy')}
+            title={t('action.copy')}
+          >
+            <Copy size={16} />
+          </button>
+          <button
+            data-testid="bulk-reorder-btn"
+            onClick={bulkReorder}
+            className="p-1 hover:bg-neutral-100 rounded"
+            aria-label={t('action.moveToNum')}
+            title={t('action.moveToNum')}
+          >
+            <ListOrdered size={16} />
+          </button>
+          <button
+            data-testid="bulk-delete-btn"
+            onClick={bulkDelete}
+            className="p-1 hover:bg-neutral-100 rounded text-red-600"
+            aria-label={t('action.delete')}
+            title={t('action.delete')}
+          >
+            <Trash2 size={16} />
+          </button>
           <button
             data-testid="clear-selection-btn"
             onClick={clearSelection}
@@ -750,45 +691,21 @@ export default function App() {
       )}
 
       {/* List */}
-      <div className="border border-neutral-200 rounded-lg bg-white overflow-hidden">
+      <div className="mt-2 border border-neutral-200 rounded-lg bg-white overflow-hidden">
         <FileBrowser
           items={listItems}
           selectMode={selectMode}
           selectedIds={selectedIds}
           onToggleSelect={toggleSelect}
-          onOpenFolder={(id) => {
-            if (id === '__TRASH_FOLDER__') {
-              navigateTo(id);
-              return;
-            }
-            if (currentFolderId === '__TRASH_FOLDER__') {
-              restoreTrashItem(id);
-              showToast('Item berhasil dipulihkan');
-              return;
-            }
-            navigateTo(id);
-          }}
+          onOpenFolder={(id) => navigateTo(id)}
           onCopyFile={copyFileToClipboard}
-          onOpenFile={(it) => {
-            if (currentFolderId === '__TRASH_FOLDER__') {
-              restoreTrashItem(it.id);
-              showToast('Item berhasil dipulihkan');
-              return;
-            }
-            setOpenFile(it);
-          }}
+          onOpenFile={(it) => setOpenFile(it)}
           onMenu={(it) => openItemMenu(it)}
           onDropOnFolder={onDropOnFolder}
           onReorder={onReorder}
-          emptyLabel={searchMode ? t('empty.search') : (currentFolderId === '__TRASH_FOLDER__' ? 'Sampah kosong' : t('empty.folder'))}
+          emptyLabel={searchMode ? t('empty.search') : t('empty.folder')}
           searchMode={searchMode}
           pathOf={pathOf}
-          inTrash={currentFolderId === '__TRASH_FOLDER__'}
-          trashCount={trashItems.length}
-          onRestoreTrash={async (id) => {
-            await restoreTrashItem(id);
-            showToast('Item berhasil dipulihkan');
-          }}
         />
       </div>
 
@@ -879,6 +796,10 @@ export default function App() {
             onSmartSync={handleSmartSync}
             onExport={handleExport}
             onImport={handleImport}
+            trashItems={trashItems}
+            onRestoreTrash={restoreTrashItem}
+            onPermanentDeleteTrash={permanentDeleteTrashItem}
+            onEmptyTrash={emptyTrash}
           />
         )}
       </Suspense>

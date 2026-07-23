@@ -33,11 +33,15 @@ interface Props {
   onSmartSync?: () => Promise<void>;
   onExport?: () => void;
   onImport?: () => void;
+  trashItems?: FileSystemItem[];
+  onRestoreTrash?: (id: string) => void;
+  onPermanentDeleteTrash?: (id: string) => void;
+  onEmptyTrash?: () => void;
 }
 
 type TabType = 'api' | 'wallet' | 'profile' | 'sync' | null;
 
-export const SettingsDialog = ({ user, loading, syncing, logout, onClose, onSmartSync, onExport, onImport }: Props) => {
+export const SettingsDialog = ({ user, loading, syncing, logout, onClose, onSmartSync, onExport, onImport, trashItems = [], onRestoreTrash, onPermanentDeleteTrash, onEmptyTrash }: Props) => {
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<TabType>(window.innerWidth < 640 ? null : 'api');
   const [apiKey, setApiKey] = useState('');
@@ -115,7 +119,7 @@ export const SettingsDialog = ({ user, loading, syncing, logout, onClose, onSmar
              <X size={20} />
            </button>
          </div>
-          <div className="flex-1 overflow-y-auto p-6">
+         <div className="flex-1 overflow-y-auto p-6">
             {activeTab === 'profile' && (
               <div className="space-y-4">
                 <h4 className="text-sm font-semibold text-neutral-800 border-b border-neutral-100 pb-2">{t('settings.profile.title')}</h4>
@@ -195,6 +199,37 @@ export const SettingsDialog = ({ user, loading, syncing, logout, onClose, onSmar
                       </div>
                     </button>
                   </div>
+                </div>
+
+                <div className="mt-6">
+                  <h4 className="text-sm font-semibold text-neutral-800 border-b border-neutral-100 pb-2 flex items-center justify-between">
+                    <span>Sampah ({trashItems.length})</span>
+                  </h4>
+                  <p className="text-xs text-neutral-500 mt-1">File dan folder yang dihapus tersimpan di sini. File tidak dapat dihapus permanen, hanya dapat dipulihkan.</p>
+                  {trashItems.length === 0 ? (
+                    <div className="text-center py-6 text-xs text-neutral-400 bg-neutral-50 rounded-xl mt-3 border border-neutral-100">
+                      Sampah kosong
+                    </div>
+                  ) : (
+                    <div className="space-y-2 mt-3 max-h-60 overflow-y-auto pr-1">
+                      {trashItems.map((item) => (
+                        <div key={item.id} className="flex items-center justify-between p-3 bg-white border border-neutral-200 rounded-xl shadow-sm text-sm">
+                          <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                            {item.type === 'folder' ? <Folder size={16} className="text-amber-500 flex-shrink-0" /> : <FileText size={16} className="text-blue-500 flex-shrink-0" />}
+                            <span className="truncate font-medium text-neutral-800">{item.name}</span>
+                          </div>
+                          <button
+                            onClick={() => onRestoreTrash && onRestoreTrash(item.id)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-xs font-medium transition-colors flex-shrink-0"
+                            title="Pulihkan"
+                          >
+                            <RotateCcw size={14} />
+                            Pulihkan
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
               </div>
@@ -347,6 +382,37 @@ export const SettingsDialog = ({ user, loading, syncing, logout, onClose, onSmar
                       </div>
                     </button>
                   </div>
+                </div>
+
+                <div className="mt-6">
+                  <h4 className="text-sm font-semibold text-neutral-800 border-b border-neutral-100 pb-2 flex items-center justify-between">
+                    <span>Sampah ({trashItems.length})</span>
+                  </h4>
+                  <p className="text-xs text-neutral-500 mt-1">File dan folder yang dihapus tersimpan di sini. File tidak dapat dihapus permanen, hanya dapat dipulihkan.</p>
+                  {trashItems.length === 0 ? (
+                    <div className="text-center py-6 text-xs text-neutral-400 bg-neutral-50 rounded-xl mt-3 border border-neutral-100">
+                      Sampah kosong
+                    </div>
+                  ) : (
+                    <div className="space-y-2 mt-3 max-h-60 overflow-y-auto pr-1">
+                      {trashItems.map((item) => (
+                        <div key={item.id} className="flex items-center justify-between p-3 bg-white border border-neutral-200 rounded-xl shadow-sm text-sm">
+                          <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                            {item.type === 'folder' ? <Folder size={16} className="text-amber-500 flex-shrink-0" /> : <FileText size={16} className="text-blue-500 flex-shrink-0" />}
+                            <span className="truncate font-medium text-neutral-800">{item.name}</span>
+                          </div>
+                          <button
+                            onClick={() => onRestoreTrash && onRestoreTrash(item.id)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-xs font-medium transition-colors flex-shrink-0"
+                            title="Pulihkan"
+                          >
+                            <RotateCcw size={14} />
+                            Pulihkan
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
               </div>

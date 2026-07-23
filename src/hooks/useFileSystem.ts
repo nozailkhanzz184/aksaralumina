@@ -86,7 +86,6 @@ export const useFileSystem = () => {
   };
 
   const renameItem = async (id: string, name: string) => {
-    if (id === '__TRASH_FOLDER__') return;
     const it = items.find((i) => i.id === id);
     if (!it) return;
     const finalName = name.trim();
@@ -146,9 +145,7 @@ export const useFileSystem = () => {
   }, [loadTrash]);
 
   const deleteMany = async (ids: string[]) => {
-    const validIds = ids.filter((id) => id !== '__TRASH_FOLDER__');
-    if (!validIds.length) return;
-    const all = collectDescendants(validIds);
+    const all = collectDescendants(ids);
     const now = Date.now();
     const itemsToDelete = items.filter((i) => all.includes(i.id)).map(i => ({ ...i, deletedAt: now }));
     if (itemsToDelete.length > 0) {
@@ -202,12 +199,8 @@ export const useFileSystem = () => {
   };
 
   const moveMany = async (ids: string[], targetParentId: string | null) => {
-    if (targetParentId === '__TRASH_FOLDER__') {
-      await deleteMany(ids);
-      return;
-    }
     const validIds = ids.filter((id) => {
-      if (id === '__TRASH_FOLDER__' || id === targetParentId) return false;
+      if (id === targetParentId) return false;
       const it = items.find((i) => i.id === id);
       if (!it) return false;
       if (it.type === 'folder' && targetParentId && isDescendant(id, targetParentId)) return false;
@@ -274,21 +267,7 @@ export const useFileSystem = () => {
     }
   };
 
-  const TRASH_FOLDER_ID = '__TRASH_FOLDER__';
-  const trashFolderItem: FileSystemItem = {
-    id: TRASH_FOLDER_ID,
-    parentId: null,
-    name: 'trash',
-    type: 'folder',
-    order: -1,
-    createdAt: 0,
-    updatedAt: 0,
-  };
-
   const getBreadcrumbs = useCallback((): FileSystemItem[] => {
-    if (currentFolderId === TRASH_FOLDER_ID) {
-      return [trashFolderItem];
-    }
     const crumbs: FileSystemItem[] = [];
     let cur = items.find((i) => i.id === currentFolderId);
     while (cur) {
@@ -298,16 +277,7 @@ export const useFileSystem = () => {
     return crumbs;
   }, [items, currentFolderId]);
 
-  const currentItems = useMemo(() => {
-    if (currentFolderId === TRASH_FOLDER_ID) {
-      return trashItems;
-    }
-    const base = childrenOf(currentFolderId);
-    if (currentFolderId === null) {
-      return [trashFolderItem, ...base];
-    }
-    return base;
-  }, [currentFolderId, childrenOf, trashItems]);
+  const currentItems = useMemo(() => childrenOf(currentFolderId), [childrenOf, currentFolderId]);
 
   const searchItems = useCallback(
     (q: string): FileSystemItem[] => {
