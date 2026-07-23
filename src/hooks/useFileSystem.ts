@@ -253,18 +253,7 @@ export const useFileSystem = () => {
     return JSON.stringify({ app: 'plaintxtai', version: 1, items, apiKey: aiKey, model: aiModel }, null, 2);
   };
 
-  const findDuplicates = useCallback(() => {
-    const contentMap: Record<string, string[]> = {};
-    items.forEach((item) => {
-      if (item.type === 'file' && typeof item.content === 'string') {
-        const c = item.content.trim();
-        if (!c) return; // Abaikan file kosong
-        if (!contentMap[c]) contentMap[c] = [];
-        contentMap[c].push(item.id);
-      }
-    });
-    return Object.values(contentMap).filter((ids) => ids.length > 1);
-  }, [items]);
+
 
   const importJSON = async (json: string, replace: boolean) => {
     const data = JSON.parse(json);
@@ -337,7 +326,6 @@ export const useFileSystem = () => {
     importJSON,
     importItems,
     isDescendant,
-    findDuplicates,
     clearAll,
   };
 };

@@ -1,16 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { Crown, CheckCircle2, Clock, Upload, ShieldCheck, Zap, Copy, QrCode, Info } from 'lucide-react';
+import React, { useState } from 'react';
+import { Crown, CheckCircle2, Clock, Upload, ShieldCheck, Zap, Copy } from 'lucide-react';
 import { useI18n } from '../lib/i18n';
 import { account } from '../lib/appwrite';
 import { toast } from 'sonner';
-import qrisImage from '../assets/qris.png';
 
 export const SubscriptionCard = ({ user }: { user: any }) => {
   const { t } = useI18n();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'info' | 'payment'>('info');
-  const [txId, setTxId] = useState('');
-  const [showQRIS, setShowQRIS] = useState(false);
+  const [pastedUrl, setPastedUrl] = useState('');
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   
   const prefs = user?.prefs || {};
   const proStatus = prefs.proStatus || 'free'; // 'free', 'pending', 'pro'
@@ -24,33 +23,46 @@ export const SubscriptionCard = ({ user }: { user: any }) => {
     }
   };
 
-  const handleUpgrade = () => {
-    setStep('payment');
-  };
-  
-  const handleSubmitProof = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!txId.trim()) {
-      toast.error('Masukkan bukti atau ID transaksi');
-      return;
+  const handlePasteUrl = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text || !text.trim()) {
+        toast.error('Clipboard kosong atau tidak ada URL');
+        return;
+      }
+      const url = text.trim();
+      setPastedUrl(url);
+      toast.success('URL berhasil ditempel. Klik URL untuk memvalidasi atau kirim.');
+    } catch (err: any) {
+      toast.error('Gagal mengakses clipboard: ' + (err.message || 'Izin ditolak'));
     }
-    
+  };
+
+  const handleConfirmSubmit = async () => {
+    if (!pastedUrl) return;
+    setShowConfirmModal(true);
+  };
+
+  const handleExecuteSubmit = async () => {
+    setShowConfirmModal(false);
     setLoading(true);
     try {
       await account.updatePrefs({
         ...prefs,
         proStatus: 'pending',
-        paymentProof: txId,
+        paymentProof: pastedUrl,
         submittedAt: new Date().toISOString()
       });
-      toast.success('Bukti pembayaran berhasil dikirim. Menunggu verifikasi.');
-      // Refresh window or state slightly not robust, but okay for this prototype
+      toast.success('Bukti URL berhasil dikirim. Menunggu verifikasi.');
       window.location.reload();
     } catch (err: any) {
       toast.error('Gagal mengirim bukti: ' + err.message);
-    } finally {
       setLoading(false);
     }
+  };
+
+  const handleUpgrade = () => {
+    setStep('payment');
   };
 
   if (!user) {
@@ -138,51 +150,19 @@ export const SubscriptionCard = ({ user }: { user: any }) => {
           <h3 className="font-bold text-neutral-900 text-lg mb-4 border-b border-neutral-100 pb-3">Selesaikan Pembayaran</h3>
           
           <div className="bg-neutral-50 p-4 rounded-xl border border-neutral-200 mb-5">
-            <p className="text-sm text-neutral-600 mb-2">Silakan transfer <strong>Rp 5.000</strong> ke salah satu metode pembayaran berikut:</p>
-            <ul className="text-sm font-medium text-neutral-800 space-y-2 mb-3">
-              <li className="flex flex-col border-b border-neutral-200 pb-1.5 pt-1">
-                <div className="flex justify-between items-center">
-                  <span className="text-neutral-500">QRIS (Semua Pembayaran)</span>
-                  <button 
-                    type="button" 
-                    onClick={() => setShowQRIS(!showQRIS)} 
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium bg-neutral-100 text-neutral-700 hover:bg-neutral-200 hover:text-neutral-900 rounded-lg transition-colors"
-                  >
-                    <QrCode size={14} />
-                    {showQRIS ? 'Tutup QRIS' : 'Lihat QRIS'}
-                  </button>
-                </div>
-                {showQRIS && (
-                  <div className="mt-3 mb-1 flex flex-col items-center justify-center p-4 bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm">
-                    <img src={qrisImage} alt="QRIS AksaraLumina" className="w-full max-w-[200px] h-auto object-contain mb-2" />
-                  </div>
-                )}
-              </li>
-            </ul>
+            <p className="text-sm text-neutral-600 mb-2">Silakan transfer <strong>Rp 5.000</strong> ke alamat Crypto berikut:</p>
             
-            <div className="mt-4 mb-3">
+            <div className="mt-2 mb-3">
               <p className="text-xs font-semibold text-neutral-500 mb-2 uppercase tracking-wider">Crypto (Pilih Jaringan)</p>
               <div className="space-y-2">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white border border-neutral-200 rounded-lg p-2.5 gap-2">
                   <div>
                     <div className="text-sm font-medium text-neutral-800">USDT / USDC / ETH</div>
-                    <div className="text-xs text-neutral-500">Base / BSC / Polygon / Optimism</div>
+                    <div className="text-xs text-neutral-500">Base / BSC / Polygon / Optimism / Arbitrum</div>
                   </div>
                   <div className="flex items-center gap-2 self-end sm:self-auto">
                     <span className="text-xs text-neutral-500 font-mono truncate w-[100px]" title="0x0b90bCCf03A9cF051F6cCCeC6dFc45259752C825">0x0b90...C825</span>
                     <button type="button" onClick={() => copyToClipboard('0x0b90bCCf03A9cF051F6cCCeC6dFc45259752C825', 'EVM Crypto')} className="p-1.5 bg-neutral-100 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200 rounded-md transition-colors" title="Salin alamat EVM">
-                      <Copy size={14} />
-                    </button>
-                  </div>
-                </div>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white border border-neutral-200 rounded-lg p-2.5 gap-2">
-                  <div>
-                    <div className="text-sm font-medium text-neutral-800">Solana (SOL / USDC)</div>
-                    <div className="text-xs text-neutral-500">Jaringan: Solana</div>
-                  </div>
-                  <div className="flex items-center gap-2 self-end sm:self-auto">
-                    <span className="text-xs text-neutral-500 font-mono truncate w-[100px]" title="4S2tC1ze5STbQKtRF54dRwDzYwNWnXwuhqNXB985g6YC">4S2tC1...g6YC</span>
-                    <button type="button" onClick={() => copyToClipboard('4S2tC1ze5STbQKtRF54dRwDzYwNWnXwuhqNXB985g6YC', 'Solana')} className="p-1.5 bg-neutral-100 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200 rounded-md transition-colors" title="Salin alamat Solana">
                       <Copy size={14} />
                     </button>
                   </div>
@@ -195,45 +175,98 @@ export const SubscriptionCard = ({ user }: { user: any }) => {
             </p>
           </div>
 
-          <form onSubmit={handleSubmitProof} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-neutral-600 mb-1.5 uppercase tracking-wider">
-                ID Transaksi / Bukti Pembayaran
-              </label>
-              <input
-                type="text"
-                required
-                value={txId}
-                onChange={e => setTxId(e.target.value)}
-                className="w-full bg-neutral-50 border border-neutral-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-neutral-900 transition-colors"
-              />
+          <div className="space-y-3">
+            <p className="text-xs text-neutral-600">
+              Salin URL transaksi/eksplorer dari dompet Anda, lalu klik tombol di bawah:
+            </p>
+
+            {pastedUrl ? (
+              <div className="space-y-2">
+                <div>
+                  <label className="block text-[11px] font-semibold text-neutral-500 mb-1 uppercase tracking-wider">
+                    Klik untuk Validasi:
+                  </label>
+                  <a
+                    href={pastedUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block p-2.5 bg-blue-50 border border-blue-200 rounded-lg text-xs font-mono text-blue-700 underline truncate hover:bg-blue-100 transition-colors shadow-sm"
+                    title="Klik untuk membuka link eksplorer dan memvalidasi"
+                  >
+                    {pastedUrl}
+                  </a>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={handlePasteUrl}
+                    className="flex-1 bg-white border border-neutral-300 text-neutral-700 text-xs font-medium py-2 rounded-xl hover:bg-neutral-50 transition-colors"
+                  >
+                    Tempel Ulang
+                  </button>
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={handleConfirmSubmit}
+                    className="flex-[2] bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-medium py-2 px-3 rounded-xl transition-transform active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-1.5 shadow-sm"
+                  >
+                    {loading ? <Upload className="animate-bounce" size={16} /> : <CheckCircle2 size={16} className="text-emerald-400" />}
+                    Konfirmasi & Kirim
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setStep('info')}
+                  className="flex-1 bg-white border border-neutral-200 text-neutral-700 font-medium py-2.5 rounded-xl hover:bg-neutral-50 transition-colors"
+                >
+                  Kembali
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePasteUrl}
+                  className="flex-[2] bg-neutral-900 hover:bg-neutral-800 text-white font-medium py-2.5 px-4 rounded-xl transition-transform active:scale-[0.98] flex items-center justify-center gap-2 shadow-sm"
+                >
+                  <Upload size={18} className="text-amber-400" />
+                  Tempel URL
+                </button>
+              </div>
+                        )}
+          </div>
+        </div>
+      )}
+
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-neutral-100 space-y-4">
+            <h4 className="font-bold text-neutral-900 text-lg">Konfirmasi Pengiriman</h4>
+            <p className="text-xs text-neutral-600 leading-relaxed">
+              Apakah Anda yakin ingin mengirim URL eksplorer ini sebagai bukti pembayaran? Pastikan URL sudah benar.
+            </p>
+            <div className="bg-neutral-50 p-2.5 rounded-lg border border-neutral-200">
+              <span className="block text-[10px] text-neutral-400 uppercase font-semibold mb-1">URL:</span>
+              <span className="text-xs font-mono text-neutral-800 break-all">{pastedUrl}</span>
             </div>
-            
-            <div className="flex gap-3">
+            <div className="flex gap-2 pt-2">
               <button
                 type="button"
-                onClick={() => setStep('info')}
-                className="flex-1 bg-white border border-neutral-200 text-neutral-700 font-medium py-2.5 rounded-xl hover:bg-neutral-50 transition-colors"
+                onClick={() => setShowConfirmModal(false)}
+                className="flex-1 bg-white border border-neutral-200 text-neutral-700 text-xs font-medium py-2.5 rounded-xl hover:bg-neutral-50 transition-colors"
               >
-                Kembali
+                Batal
               </button>
               <button
-                type="submit"
+                type="button"
                 disabled={loading}
-                className="flex-1 bg-neutral-900 hover:bg-neutral-800 text-white font-medium py-2.5 rounded-xl transition-transform active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2"
+                onClick={handleExecuteSubmit}
+                className="flex-1 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-medium py-2.5 rounded-xl transition-transform active:scale-[0.98] flex items-center justify-center gap-1.5 shadow-sm"
               >
-                {loading ? <Upload className="animate-bounce" size={18} /> : <CheckCircle2 size={18} />}
-                Kirim Bukti
+                {loading ? <Upload className="animate-bounce" size={14} /> : <CheckCircle2 size={14} className="text-emerald-400" />}
+                Ya, Kirim
               </button>
             </div>
-          </form>
-          
-          <div className="bg-blue-50 border border-blue-100 p-3.5 rounded-xl mt-4 text-xs text-blue-800 space-y-2">
-            <p className="font-semibold text-blue-900 flex items-center gap-1.5"><Info size={15} /> Panduan Verifikasi Cepat</p>
-            <ul className="list-disc pl-4 space-y-1.5 opacity-90 leading-relaxed">
-              <li><strong>QRIS:</strong> Masukkan nomor <strong>RRN (Retrieval Reference Number)</strong> yang tertera pada struk, ATAU masukkan link URL gambar struk yang menampilkan RRN dengan jelas.</li>
-              <li><strong>Crypto:</strong> Masukkan <strong>URL Transaction Hash (TxHash)</strong> dari Blockchain Explorer.</li>
-            </ul>
           </div>
         </div>
       )}

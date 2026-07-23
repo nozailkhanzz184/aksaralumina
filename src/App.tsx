@@ -27,7 +27,6 @@ import { AppLogo } from './components/AppLogo';
 
 import { FileBrowser } from './components/FileBrowser';
 import { ItemMenu, MenuAction } from './components/ItemMenu';
-import { DuplicateDialog } from './components/DuplicateDialog';
 import { SettingsDialog } from './components/SettingsDialog';
 import { LoginScreen } from './components/LoginScreen';
 import { useDialog } from './context/DialogContext';
@@ -70,7 +69,6 @@ export default function App() {
     exportJSON,
     importJSON,
     importItems,
-    findDuplicates,
     clearAll,
   } = fs;
 
@@ -90,7 +88,6 @@ export default function App() {
   >(null);
 
   const [aiOpen, setAIOpen] = useState(false);
-  const [duplicateDialog, setDuplicateDialog] = useState<null | { duplicates: string[][]; items: FileSystemItem[] }>(null);
   const [aiSources, setAISources] = useState<string[] | undefined>(undefined);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -368,15 +365,6 @@ export default function App() {
     }
   };
 
-  const handleDeleteDuplicates = () => {
-    const dups = findDuplicates();
-    if (dups.length > 0) {
-      setDuplicateDialog({ duplicates: dups, items: items });
-    } else {
-      showToast(t('toast.noDuplicates'));
-    }
-  };
-
   const openAIForItems = (ids?: string[]) => {
     setAISources(ids && ids.length ? ids : undefined);
     setAIOpen(true);
@@ -627,14 +615,7 @@ export default function App() {
               >
                 <ListChecks size={18} />
               </button>
-              <button
-                data-testid="delete-duplicates-btn"
-                onClick={handleDeleteDuplicates}
-                className="p-1.5 hover:bg-neutral-100 rounded text-neutral-700 transition-colors"
-                title={t('btn.removeDuplicates')}
-              >
-                <Layers size={18} />
-              </button>
+
               <button
                 data-testid="ai-btn"
                 onClick={() => setAIOpen(true)}
@@ -804,18 +785,7 @@ export default function App() {
             onCreateFolder={(name, parentId) => createItem(name, 'folder', parentId)}
           />
         )}
-        {duplicateDialog && (
-          <DuplicateDialog
-            duplicates={duplicateDialog.duplicates}
-            items={duplicateDialog.items}
-            onClose={() => setDuplicateDialog(null)}
-            onConfirm={(toDelete) => {
-              guardedDelete(toDelete);
-              setDuplicateDialog(null);
-            }}
-            pathOf={pathOf}
-          />
-        )}
+
         
         {settingsOpen && (
           <SettingsDialog
