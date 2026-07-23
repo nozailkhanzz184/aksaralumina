@@ -1,7 +1,7 @@
 {
-  "name": "simpananteks792",
-  "short_name": "simpananteks792",
-  "description": "Ultra-minimalis penyimpan teks polos dengan AI",
+  "name": "AksaraLumina",
+  "short_name": "AksaraLumina",
+  "description": "A versatile, offline-first file and notes management application.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
